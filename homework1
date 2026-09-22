@@ -1,0 +1,38 @@
+print("Программа расчета количества информации")
+try:
+    # Запрос данных у пользователя
+    lines = int(input("Введите количество строк на странице: "))
+    chars_per_line = int(input("Введите количество символов в строке: "))
+    alphabet_size = int(input("Введите мощность алфавита (количество символов): "))
+    
+    if lines <= 0 or chars_per_line <= 0 or alphabet_size <= 1:
+        print("Ошибка: значения должны быть положительными числами, а алфавит больше 1.")
+    else:
+        # Вычисление информационного веса одного символа (замена log2)
+        bits_per_symbol = 0
+        while (1 << bits_per_symbol) < alphabet_size:
+            bits_per_symbol += 1
+            
+        # Расчет общего количества символов и бит
+        total_symbols = lines * chars_per_line
+        bits = total_symbols * bits_per_symbol
+        
+        # Перевод в другие единицы измерения
+        bytes_val = bits / 8
+        kb_val = bytes_val / 1024
+        mb_val = kb_val / 1024
+        gb_val = mb_val / 1024
+        
+        # Вывод результатов
+        print("Результаты расчета")
+        print(f"Общее количество символов: {total_symbols}")
+        print(f"Вес одного символа:         {bits_per_symbol} бит")
+        print("Объем информации в разных единицах")
+        print(f"Биты:     {bits} бит")
+        print(f"Байты:    {bytes_val:.4f} Б")
+        print(f"Килобайты: {kb_val:.4f} Кбайт")
+        print(f"Мегабайты: {mb_val:.4f} Мбайт")
+        print(f"Гигабайты: {gb_val:.4f} Гбайт")
+        
+except ValueError:
+    print("Ошибка ввода: пожалуйста, вводите только целые числа.")
