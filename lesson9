@@ -1,0 +1,62 @@
+import random
+
+
+def generate_large_island_map(size=1000):
+    PAD = 3
+    grid = [['0' for _ in range(size)] for _ in range(size)]
+
+    # 1. Заполняем шумом внутри границ
+    for y in range(PAD , size - PAD):
+        for x in range(PAD , size - PAD):
+            if random.random() < 0.42:
+                grid[y][x] = '*'
+
+    # 2. Клеточный автомат (сглаживание дыр)
+    for _ in range(4):
+        next_grid = [row[:] for row in grid]
+        for y in range(PAD , size - PAD):
+            for x in range(PAD , size - PAD):
+                neighbors = 0
+                for dy in [-1 , 0 , 1]:
+                    for dx in [-1 , 0 , 1]:
+                        if grid[y + dy][x + dx] == '*':
+                            neighbors += 1
+                if neighbors > 4:
+                    next_grid[y][x] = '*'
+                else:
+                    next_grid[y][x] = '0'
+        grid = next_grid
+
+    # 3. Удаление островов меньше 5 клеток
+    visited = [[False for _ in range(size)] for _ in range(size)]
+    for y in range(PAD , size - PAD):
+        for x in range(PAD , size - PAD):
+            if grid[y][x] == '*' and not visited[y][x]:
+                island_cells = []
+                queue = [(y , x)]
+                visited[y][x] = True
+
+                while queue:
+                    cy , cx = queue.pop(0)
+                    island_cells.append((cy , cx))
+                    for dy , dx in [(-1 , 0) , (1 , 0) , (0 , -1) , (0 , 1)]:
+                        ny , nx = cy + dy , cx + dx
+                        if grid[ny][nx] == '*' and not visited[ny][nx]:
+                            visited[ny][nx] = True
+                            queue.append((ny , nx))
+
+                if len(island_cells) < 5:
+                    for iy , ix in island_cells:
+                        grid[iy][ix] = '0'
+    return grid
+
+
+# Генерируем
+large_map = generate_large_island_map(1000)
+
+# Сохраняем ВСЮ карту в файл
+print("Сохраняем карту в файл island_map.txt...")
+with open("island_map.txt" , "w" , encoding="utf-8") as f:
+    for row in large_map:
+        f.write("".join(row) + "\n")
+print("Готово! Ищите файл 'island_map.txt' в папке со скриптом.")
