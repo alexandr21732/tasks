@@ -1,0 +1,73 @@
+menu = {
+    'детское меню': {'Пицца детская пепперони': 400, 'Картофель фри': 150, 'Молочный коктейль': 200, 'Пицца Двойной цыпленок': 560, 'Наггетсы': 200},
+    'взрослое меню': {'Пицца пепперони': 500, 'Пицца Сырная': 700, 'Пицца Мясная': 350, 'Пицца Ветчина и грибы': 570, 'Пицца Маргарита': 450},
+}
+
+
+def get_age_category(age):
+    if age < 12:
+        return 'детское меню'
+    else:
+        return 'взрослое меню'
+
+
+def main():
+    print('Добро пожаловать в Пиццерию.')
+    while True:
+        try:
+            guests_count = int(input('Сколько вас человек? '))
+            if guests_count > 0:
+                break
+        except ValueError:
+            print('ошибка')
+
+    order_list = []
+    total_price = 0
+
+    for i in range(1, guests_count + 1):
+        while True:
+            try:
+                age = int(input(f'Гость {i}. Сколько вам лет? '))
+                if 0 < age < 120:
+                    break
+                print('Пожалуйста введите реальный возраст.')
+            except ValueError:
+                print('Введите возраст цифрами.')
+
+        category = get_age_category(age)
+        print(f'Отлично! Для вас доступно {category} меню:')
+
+        # Показываем меню
+        current_menu = menu[category]
+        menu_items = list(current_menu.keys())
+
+        for idx, (item, price) in enumerate(current_menu.items(), 1):
+            print(f'{idx}. {item} — {price} руб.')
+
+        # Выбор позиции
+        while True:
+            try:
+                choice = int(input('Выберите номер блюда для Гостя (0 — пропустить): '))
+                if choice == 0:
+                    break
+                elif 1 <= choice <= len(menu_items):
+                    selected_item = menu_items[choice - 1]
+                    item_price = current_menu[selected_item]
+                    order_list.append(selected_item)
+                    total_price += item_price
+                    print(f'Добавлено: {selected_item} ({item_price} руб.)')
+                    break
+                else:
+                    print('Неверный номер.')
+            except ValueError:
+                print('Пожалуйста, введите номер цифрой.')
+
+    if total_price == 0:
+        print('Вы ничего не заказали')
+        return
+
+    print(f"Ваш заказ сформирован: {', '.join(order_list)}")
+    print(f'Итого к оплате: {total_price} руб.')
+
+
+main()
