@@ -68,6 +68,38 @@ def main():
 
     print(f"Ваш заказ сформирован: {', '.join(order_list)}")
     print(f'Итого к оплате: {total_price} руб.')
+    print('Как будет проходить оплата?')
+    print('1. Картой')
+    print('2. Наличными')
+    
+    while True:
+        try:
+            payment_method = int(input('Выберите способ оплаты (1 или 2): '))
+            if payment_method in:
+                break
+            print('Пожалуйста, выберите 1 или 2.')
+        except ValueError:
+            print('Введите число 1 или 2.')
 
+    if payment_method == 1:
+        print('Оплата прошла успешно! Спасибо за заказ!')
+    else:
+        # Логика оплаты наличными со сдачей
+        while True:
+            try:
+                cash = int(input(f'Введите сумму наличных (не менее {total_price} руб.): '))
+                if cash >= total_price:
+                    change = cash - total_price
+                    print(f'Принято: {cash} руб.')
+                    if change > 0:
+                        print(f'Ваша сдача: {change} руб.')
+                    else:
+                        print('Без сдачи, спасибо!')
+                    print('Спасибо за заказ! Приятного аппетита!')
+                    break
+                else:
+                    print(f'Суммы недостаточно. Нужно еще хотя бы {total_price - cash} руб.')
+            except ValueError:
+                print('Пожалуйста, введите сумму цифрами.')
 
 main()
