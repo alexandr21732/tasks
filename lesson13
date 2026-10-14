@@ -1,0 +1,13 @@
+import json
+
+
+players = {
+    'Froggy': {"level": 5, "score": 12, "items": ["dimond pickaxe"]},
+    'Dimaaaaa': {"level": 45, "score": 2212, "items": ["dimond pickaxe"]}
+}
+players['Misha333'] = {"level": 17, "score": 150, "items": ["dimond pickaxe"]}
+players['Froggy']['level'] = 6
+
+with open("players.json", "w", encoding="utf-8") as file:
+    json.dump(players, file, ensure_ascii=False, indent=4)
+
