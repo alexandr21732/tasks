@@ -75,7 +75,7 @@ def main():
     while True:
         try:
             payment_method = int(input('Выберите способ оплаты (1 или 2): '))
-            if payment_method in:
+            if payment_method in [1,2] :
                 break
             print('Пожалуйста, выберите 1 или 2.')
         except ValueError:
