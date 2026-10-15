@@ -1,0 +1,185 @@
+import json
+import os
+
+# База рецептов для автоматического списания ингредиентов при заказе
+RECIPES = {
+    'Пицца детская пепперони': {'Пепперони': 1, 'Моцарелла': 1, 'Томаты': 1},
+    'Пицца пепперони': {'Пепперони': 2, 'Моцарелла': 2, 'Томаты': 1},
+    'Пицца Сырная': {'Моцарелла': 3},
+    'Пицца Маргарита': {'Моцарелла': 2, 'Томаты': 2},
+    'Пицца Ветчина и грибы': {'Моцарелла': 1},
+    'Пицца Мясная': {'Пепперони': 2, 'Моцарелла': 1},
+    'Картофель фри': {},
+    'Молочный коктейль': {},
+    'Пицца Двойной цыпленок': {'Моцарелла': 2},
+    'Наггетсы': {}
+}
+
+MENU = {
+    'детское меню': {
+        'Пицца детская пепперони': 400,
+        'Картофель фри': 150,
+        'Молочный коктейль': 200,
+        'Пицца Двойной цыпленок': 560,
+        'Наггетсы': 200
+    },
+    'взрослое меню': {
+        'Пицца пепперони': 500,
+        'Пицца Сырная': 700,
+        'Пицца Мясная': 350,
+        'Пицца Ветчина и грибы': 570,
+        'Пицца Маргарита': 450
+    },
+}
+
+def get_age_category(age):
+    if age < 12:
+        return 'детское меню'
+    else:
+        return 'взрослое меню'
+
+def load_ingredients():
+    """Загружает ингредиенты из файла или создает начальные, если файл отсутствует."""
+    filename = "ingredients.json"
+    if os.path.exists(filename):
+        try:
+            with open(filename, "r", encoding="utf-8") as file:
+                return json.load(file)
+        except Exception:
+            pass
+            
+    # Начальная инициализация из вашего второго фрагмента кода
+    ingredients = {
+        'Пепперони': {"количество": 5, "category": "мясо"},
+        'Моцарелла': {"количество": 12, "category": "сыр"}
+    }
+    ingredients['Томаты'] = {"количество": 8, "category": "овощи"}
+    ingredients['Моцарелла']['количество'] += 15  # Корректировка по коду (12 + 15 = 27)
+    
+    save_ingredients(ingredients)
+    return ingredients
+
+def save_ingredients(ingredients):
+    """Сохраняет текущий остаток ингредиентов в JSON-файл."""
+    with open("ingredients.json", "w", encoding="utf-8") as file:
+        json.dump(ingredients, file, ensure_ascii=False, indent=4)
+
+def check_and_deduct_ingredients(item_name, ingredients):
+    """Проверяет наличие ингредиентов и списывает их в случае успеха."""
+    recipe = RECIPES.get(item_name, {})
+    
+    # Сначала проверяем, хватает ли всего
+    for ing, req_qty in recipe.items():
+        if ing not in ingredients or ingredients[ing]['количество'] < req_qty:
+            print(f"Извините, {item_name} нельзя приготовить: не хватает ингредиента '{ing}'.")
+            return False
+            
+    # Если всего хватает — списываем
+    for ing, req_qty in recipe.items():
+        ingredients[ing]['количество'] -= req_qty
+    return True
+
+def main():
+    print('Добро пожаловать в Пиццерию.')
+    
+    # Загружаем актуальный склад ингредиентов
+    ingredients_stock = load_ingredients()
+    
+    while True:
+        try:
+            guests_count = int(input('Сколько вас человек? '))
+            if guests_count > 0:
+                break
+            print('Количество гостей должно быть больше 0.')
+        except ValueError:
+            print('Ошибка! Введите число.')
+            
+    order_list = []
+    total_price = 0
+    
+    for i in range(1, guests_count + 1):
+        while True:
+            try:
+                age = int(input(f'Гость {i}. Сколько вам лет? '))
+                if 0 < age < 120:
+                    break
+                print('Пожалуйста, введите реальный возраст.')
+            except ValueError:
+                print('Введите возраст цифрами.')
+                
+        category = get_age_category(age)
+        print(f'Отлично! Для вас доступно {category}:')
+        
+        current_menu = MENU[category]
+        menu_items = list(current_menu.keys())
+        
+        for idx, (item, price) in enumerate(current_menu.items(), 1):
+            print(f'{idx}. {item} — {price} руб.')
+            
+        while True:
+            try:
+                choice = int(input('Выберите номер блюда для Гостя (0 — пропустить): '))
+                if choice == 0:
+                    break
+                elif 1 <= choice <= len(menu_items):
+                    selected_item = menu_items[choice - 1]
+                    
+                    # Проверка ингредиентов перед добавлением в чек
+                    if check_and_deduct_ingredients(selected_item, ingredients_stock):
+                        item_price = current_menu[selected_item]
+                        order_list.append(selected_item)
+                        total_price += item_price
+                        print(f'Добавлено: {selected_item} ({item_price} руб.)')
+                        break
+                    else:
+                        print('Пожалуйста, выберите другое блюдо.')
+                else:
+                    print('Неверный номер.')
+            except ValueError:
+                print('Пожалуйста, введите номер цифрой.')
+                
+    if total_price == 0:
+        print('Вы ничего не заказали.')
+        return
+        
+    print(f"\nВаш заказ сформирован: {', '.join(order_list)}")
+    print(f'Итого к оплате: {total_price} руб.')
+    
+    print('Как будет проходить оплата?')
+    print('1. Картой')
+    print('2. Наличными')
+    
+    while True:
+        try:
+            payment_method = int(input('Выберите способ оплаты (1 или 2): '))
+            if payment_method in:
+                break
+            print('Пожалуйста, выберите 1 или 2.')
+        except ValueError:
+            print('Введите число 1 или 2.')
+            
+    if payment_method == 1:
+        print('Оплата прошла успешно! Спасибо за заказ!')
+    else:
+        while True:
+            try:
+                cash = int(input(f'Введите сумму наличных (не менее {total_price} руб.): '))
+                if cash >= total_price:
+                    change = cash - total_price
+                    print(f'Принято: {cash} руб.')
+                    if change > 0:
+                        print(f'Ваша сдача: {change} руб.')
+                    else:
+                        print('Без сдачи, спасибо!')
+                    break
+                else:
+                    print(f'Суммы недостаточно. Нужно еще хотя бы {total_price - cash} руб.')
+            except ValueError:
+                print('Пожалуйста, введите сумму цифрами.')
+                
+    # Сохраняем обновленные остатки на складе после успешного заказа
+    save_ingredients(ingredients_stock)
+    print('Спасибо за заказ! Приятного аппетита!')
+
+if __name__ == '__main__':
+    main()
