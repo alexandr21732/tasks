@@ -107,6 +107,10 @@ def main():
                     item_price = current_menu[selected_item]
                     order_list.append(selected_item)
                     total_price += item_price
+                if check_and_deduct_ingredients(selected_item, ingredients_stock):
+                    item_price = current_menu[selected_item]
+                    order_list.append(selected_item)
+                    total_price += item_price
                     print(f'Добавлено: {selected_item} ({item_price} руб.)')
                     break
                 else:
