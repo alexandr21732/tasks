@@ -1,3 +1,16 @@
+recipes = {
+    'Пицца детская пепперони': {'Пепперони': 1, 'Моцарелла': 1, 'Томаты': 1},
+    'Пицца пепперони': {'Пепперони': 2, 'Моцарелла': 2, 'Томаты': 1},
+    'Пицца Сырная': {'Моцарелла': 3},
+    'Пицца Маргарита': {'Моцарелла': 2, 'Томаты': 2},
+    'Пицца Ветчина и грибы': {'Моцарелла': 1, 'Ветчина': 1, 'Грибы': 1},
+    'Пицца Мясная': {'Пепперони': 2, 'Моцарелла': 1, 'Ветчина': 1},
+    'Картофель фри': {'Картофель': 1},
+    'Молочный коктейль': {'Молоко': 1},
+    'Пицца Двойной цыпленок': {'Моцарелла': 2, 'Курица': 2},
+    'Наггетсы': {'Курица': 1}
+} 
+
 menu = {
     'детское меню': {'Пицца детская пепперони': 400, 'Картофель фри': 150, 'Молочный коктейль': 200, 'Пицца Двойной цыпленок': 560, 'Наггетсы': 200},
     'взрослое меню': {'Пицца пепперони': 500, 'Пицца Сырная': 700, 'Пицца Мясная': 350, 'Пицца Ветчина и грибы': 570, 'Пицца Маргарита': 450},
@@ -10,6 +23,45 @@ def get_age_category(age):
     else:
         return 'взрослое меню'
 
+def load_ingredients():
+    filename = "ingredients.json"
+    try:
+        with open(filename, "r", encoding="utf-8") as file:
+            return json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError, IOError):
+        pass
+            
+    ingredients = {
+        'Пепперони': {"количество": 5, "category": "мясо"},
+        'Моцарелла': {"количество": 27, "category": "сыр"},
+        'Томаты': {"количество": 8, "category": "овощи"},
+        'Грибы': {"количество": 10, "category": "овощи"},
+        'Ветчина': {"количество": 10, "category": "мясо"},
+        'Картофель': {"количество": 15, "category": "овощи"},
+        'Молоко': {"количество": 12, "category": "напитки"},
+        'Курица': {"количество": 10, "category": "мясо"}
+    }
+    
+    save_ingredients(ingredients)
+    return ingredients
+
+def save_ingredients(ingredients):
+    with open("ingredients.json", "w", encoding="utf-8") as file:
+        json.dump(ingredients, file, ensure_ascii=False, indent=4)
+
+def check_and_deduct_ingredients(dish_name, ingredients):
+    recipe = RECIPES.get(dish_name, {})
+    
+    for ing, req_qty in recipe.items():
+        if ing not in ingredients or ingredients[ing]['количество'] < req_qty:
+            print(f"Ошибка: Недостаточно {ing} для приготовления.")
+            return False
+            
+    for ing, req_qty in recipe.items():
+        ingredients[ing]['количество'] -= req_qty
+        
+    save_ingredients(ingredients)
+    return True
 
 def main():
     print('Добро пожаловать в Пиццерию.')
