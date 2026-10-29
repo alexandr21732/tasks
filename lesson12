@@ -1,4 +1,5 @@
 import json
+
 recipes = {
     'Пицца детская пепперони': {'Пепперони': 1, 'Моцарелла': 1, 'Томаты': 1},
     'Пицца пепперони': {'Пепперони': 2, 'Моцарелла': 2, 'Томаты': 1},
@@ -10,13 +11,12 @@ recipes = {
     'Молочный коктейль': {'Молоко': 1},
     'Пицца Двойной цыпленок': {'Моцарелла': 2, 'Курица': 2},
     'Наггетсы': {'Курица': 1}
-} 
+}
 
 menu = {
     'детское меню': {'Пицца детская пепперони': 400, 'Картофель фри': 150, 'Молочный коктейль': 200, 'Пицца Двойной цыпленок': 560, 'Наггетсы': 200},
     'взрослое меню': {'Пицца пепперони': 500, 'Пицца Сырная': 700, 'Пицца Мясная': 350, 'Пицца Ветчина и грибы': 570, 'Пицца Маргарита': 450},
 }
-
 
 def get_age_category(age):
     if age < 12:
@@ -31,7 +31,7 @@ def load_ingredients():
             return json.load(file)
     except (FileNotFoundError, json.JSONDecodeError, IOError):
         pass
-            
+
     ingredients = {
         'Пепперони': {"количество": 5, "category": "мясо"},
         'Моцарелла': {"количество": 27, "category": "сыр"},
@@ -42,7 +42,6 @@ def load_ingredients():
         'Молоко': {"количество": 12, "category": "напитки"},
         'Курица': {"количество": 10, "category": "мясо"}
     }
-    
     save_ingredients(ingredients)
     return ingredients
 
@@ -61,16 +60,16 @@ def load_stats():
             "sales_count": {},
             "orders_history": []
         }
+
 def save_stats(stats):
     with open("sales_stats.json", "w", encoding="utf-8") as file:
         json.dump(stats, file, ensure_ascii=False, indent=4)
 
 def check_and_deduct_ingredients(dish_name, ingredients):
     recipe = recipes.get(dish_name, {})
-    
     for ing, req_qty in recipe.items():
         if ing not in ingredients or ingredients[ing]['количество'] < req_qty:
-            print(f"Ошибка: Недостаточно {ing} для приготовления.")
+            print(f"Ошибка: Недостаточно ингредиента '{ing}' для приготовления.")
             return False
             
     for ing, req_qty in recipe.items():
@@ -80,9 +79,7 @@ def check_and_deduct_ingredients(dish_name, ingredients):
     return True
 
 def log_order(order_list, total_price, stats):
-
     stats["total_revenue"] += total_price
-    
     for item in order_list:
         stats["sales_count"][item] = stats["sales_count"].get(item, 0) + 1
         
@@ -92,12 +89,12 @@ def log_order(order_list, total_price, stats):
         "items": order_list,
         "total_price": total_price
     })
-    
-    save_json("sales_stats.json", stats)
-def admin_panel(ingredients_stock):
+    save_stats(stats)
+
+def admin_panel():
     while True:
         stats = load_stats()
-        print('Панель администратора')
+        print('\n--- Панель администратора ---')
         print('1. Посмотреть количество проданных блюд')
         print('2. Посмотреть историю заказов и выручку')
         print('3. Проверить остатки ингредиентов на складе')
@@ -106,24 +103,25 @@ def admin_panel(ingredients_stock):
         try:
             choice = int(input('Выберите действие: '))
             if choice == 0:
-                print('Самоуничтожение...')
+                print('Выход из панели администратора...')
                 break
             elif choice == 1:
-                print('количество проданных блюд')
+                print('\nКоличество проданных блюд:')
                 if not stats["sales_count"]:
                     print("Продаж пока не было.")
                 for item, count in stats["sales_count"].items():
                     print(f"• {item}: {count} шт.")
             elif choice == 2:
-                print('История заказов')
+                print('\nИстория заказов:')
                 print(f"Общая выручка: {stats['total_revenue']} руб.")
                 if not stats["orders_history"]:
                     print("История заказов пуста.")
                 for order in stats["orders_history"]:
                     print(f"Заказ №{order['order_id']}: {', '.join(order['items'])} — {order['total_price']} руб.")
             elif choice == 3:
-                print('Остатки на складе')
-                for ing, info in ingredients_stock.items():
+                print('\nОстатки на складе:')
+                current_stock = load_ingredients()
+                for ing, info in current_stock.items():
                     print(f"• {ing}: {info['количество']} шт. ({info['category']})")
             else:
                 print('Неверный пункт меню.')
@@ -132,42 +130,48 @@ def admin_panel(ingredients_stock):
 
 def main():
     print('Добро пожаловать в Пиццерию.')
-   ingredients_stock = load_ingredients()
+    
     while True:
+        ingredients_stock = load_ingredients()
+        stats = load_stats()
+        
+        user_input = input('Сколько вас человек? (или введите пароль администратора): ').strip()
+        
+        if user_input == 'superadmin123':
+            admin_panel()
+            continue
+            
         try:
-            guests_count = int(input('Сколько вас человек? '))
+            guests_count = int(user_input)
             if guests_count > 0:
                 break
-            if guests_count == 'superadmin123'
-        admin_panel(ingredients_stock)
-        continue
+            else:
+                print('Количество гостей должно быть больше 0.')
         except ValueError:
-            print('ошибка')
+            print('Пожалуйста, введите число или правильный пароль.')
 
     order_list = []
     total_price = 0
-
+    
     for i in range(1, guests_count + 1):
         while True:
             try:
-                age = int(input(f'Гость {i}. Сколько вам лет? '))
+                age = int(input(f'\nГость {i}. Сколько вам лет? '))
                 if 0 < age < 120:
                     break
-                print('Пожалуйста введите реальный возраст.')
+                print('Пожалуйста, введите реальный возраст.')
             except ValueError:
                 print('Введите возраст цифрами.')
-
+                
         category = get_age_category(age)
-        print(f'Отлично! Для вас доступно {category} меню:')
-
-        # Показываем меню
+        print(f'Отлично! Для вас доступно {category}:')
+        
         current_menu = menu[category]
         menu_items = list(current_menu.keys())
-
+        
         for idx, (item, price) in enumerate(current_menu.items(), 1):
             print(f'{idx}. {item} — {price} руб.')
-
-        # Выбор позиции
+            
         while True:
             try:
                 choice = int(input('Выберите номер блюда для Гостя (0 — пропустить): '))
@@ -175,23 +179,24 @@ def main():
                     break
                 elif 1 <= choice <= len(menu_items):
                     selected_item = menu_items[choice - 1]
-                 if check_and_deduct_ingredients(selected_item, ingredients_stock):
+                    if check_and_deduct_ingredients(selected_item, ingredients_stock):
                         item_price = current_menu[selected_item]
                         order_list.append(selected_item)
                         total_price += item_price
                         print(f'Добавлено: {selected_item} ({item_price} руб.)')
-                    break
+                        break
                 else:
                     print('Неверный номер.')
             except ValueError:
                 print('Пожалуйста, введите номер цифрой.')
 
     if total_price == 0:
-        print('Вы ничего не заказали')
-        return
-
-    print(f"Ваш заказ сформирован: {', '.join(order_list)}")
+        print('Вы ничего не заказали.')
+        continue
+        
+    print(f"\nВаш заказ сформирован: {', '.join(order_list)}")
     print(f'Итого к оплате: {total_price} руб.')
+    
     print('Как будет проходить оплата?')
     print('1. Картой')
     print('2. Наличными')
@@ -199,16 +204,15 @@ def main():
     while True:
         try:
             payment_method = int(input('Выберите способ оплаты (1 или 2): '))
-            if payment_method in [1,2] :
+            if payment_method in:
                 break
             print('Пожалуйста, выберите 1 или 2.')
         except ValueError:
             print('Введите число 1 или 2.')
-
+            
     if payment_method == 1:
         print('Оплата прошла успешно! Спасибо за заказ!')
     else:
-        # Логика оплаты наличными со сдачей
         while True:
             try:
                 cash = int(input(f'Введите сумму наличных (не менее {total_price} руб.): '))
@@ -219,11 +223,13 @@ def main():
                         print(f'Ваша сдача: {change} руб.')
                     else:
                         print('Без сдачи, спасибо!')
-                    print('Спасибо за заказ! Приятного аппетита!')
                     break
                 else:
                     print(f'Суммы недостаточно. Нужно еще хотя бы {total_price - cash} руб.')
             except ValueError:
                 print('Пожалуйста, введите сумму цифрами.')
+                
+    log_order(order_list, total_price, stats)
+    print('Приятного аппетита!')
 
 main()
