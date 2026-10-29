@@ -51,11 +51,20 @@ def save_ingredients(ingredients):
         json.dump(ingredients, file, ensure_ascii=False, indent=4)
 
 def load_stats():
-    default_stats = {
-        "total_revenue": 0,
-        "sales_count": {},
-        "orders_history": []
-    }
+    filename = "sales_stats.json"
+    try:
+        with open(filename, "r", encoding="utf-8") as file:
+            return json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError, IOError):
+        return {
+            "total_revenue": 0,
+            "sales_count": {},
+            "orders_history": []
+        }
+def save_stats(stats):
+    with open("sales_stats.json", "w", encoding="utf-8") as file:
+        json.dump(stats, file, ensure_ascii=False, indent=4)
+
 def check_and_deduct_ingredients(dish_name, ingredients):
     recipe = recipes.get(dish_name, {})
     
@@ -129,7 +138,9 @@ def main():
             guests_count = int(input('Сколько вас человек? '))
             if guests_count > 0:
                 break
-            if guests_count = superadmin123
+            if guests_count == 'superadmin123'
+        admin_panel(ingredients_stock)
+        continue
         except ValueError:
             print('ошибка')
 
