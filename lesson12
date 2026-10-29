@@ -50,8 +50,14 @@ def save_ingredients(ingredients):
     with open("ingredients.json", "w", encoding="utf-8") as file:
         json.dump(ingredients, file, ensure_ascii=False, indent=4)
 
+def load_stats():
+    default_stats = {
+        "total_revenue": 0,
+        "sales_count": {},
+        "orders_history": []
+    }
 def check_and_deduct_ingredients(dish_name, ingredients):
-    recipe = RECIPES.get(dish_name, {})
+    recipe = recipes.get(dish_name, {})
     
     for ing, req_qty in recipe.items():
         if ing not in ingredients or ingredients[ing]['количество'] < req_qty:
@@ -64,13 +70,66 @@ def check_and_deduct_ingredients(dish_name, ingredients):
     save_ingredients(ingredients)
     return True
 
+def log_order(order_list, total_price, stats):
+
+    stats["total_revenue"] += total_price
+    
+    for item in order_list:
+        stats["sales_count"][item] = stats["sales_count"].get(item, 0) + 1
+        
+    order_id = len(stats["orders_history"]) + 1
+    stats["orders_history"].append({
+        "order_id": order_id,
+        "items": order_list,
+        "total_price": total_price
+    })
+    
+    save_json("sales_stats.json", stats)
+def admin_panel(ingredients_stock):
+    while True:
+        stats = load_stats()
+        print('Панель администратора')
+        print('1. Посмотреть количество проданных блюд')
+        print('2. Посмотреть историю заказов и выручку')
+        print('3. Проверить остатки ингредиентов на складе')
+        print('0. Выйти из панели администратора')
+        
+        try:
+            choice = int(input('Выберите действие: '))
+            if choice == 0:
+                print('Самоуничтожение...')
+                break
+            elif choice == 1:
+                print('количество проданных блюд')
+                if not stats["sales_count"]:
+                    print("Продаж пока не было.")
+                for item, count in stats["sales_count"].items():
+                    print(f"• {item}: {count} шт.")
+            elif choice == 2:
+                print('История заказов')
+                print(f"Общая выручка: {stats['total_revenue']} руб.")
+                if not stats["orders_history"]:
+                    print("История заказов пуста.")
+                for order in stats["orders_history"]:
+                    print(f"Заказ №{order['order_id']}: {', '.join(order['items'])} — {order['total_price']} руб.")
+            elif choice == 3:
+                print('Остатки на складе')
+                for ing, info in ingredients_stock.items():
+                    print(f"• {ing}: {info['количество']} шт. ({info['category']})")
+            else:
+                print('Неверный пункт меню.')
+        except ValueError:
+            print('Введите число.')
+
 def main():
     print('Добро пожаловать в Пиццерию.')
+   ingredients_stock = load_ingredients()
     while True:
         try:
             guests_count = int(input('Сколько вас человек? '))
             if guests_count > 0:
                 break
+            if guests_count = superadmin123
         except ValueError:
             print('ошибка')
 
@@ -105,14 +164,11 @@ def main():
                     break
                 elif 1 <= choice <= len(menu_items):
                     selected_item = menu_items[choice - 1]
-                    item_price = current_menu[selected_item]
-                    order_list.append(selected_item)
-                    total_price += item_price
-                if check_and_deduct_ingredients(selected_item, ingredients_stock):
-                    item_price = current_menu[selected_item]
-                    order_list.append(selected_item)
-                    total_price += item_price
-                    print(f'Добавлено: {selected_item} ({item_price} руб.)')
+                 if check_and_deduct_ingredients(selected_item, ingredients_stock):
+                        item_price = current_menu[selected_item]
+                        order_list.append(selected_item)
+                        total_price += item_price
+                        print(f'Добавлено: {selected_item} ({item_price} руб.)')
                     break
                 else:
                     print('Неверный номер.')
