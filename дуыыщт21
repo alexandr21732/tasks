@@ -1,0 +1,322 @@
+import json
+import os
+import hashlib
+import hmac
+from functools import wraps
+from datetime import datetime
+
+recipes = {
+    'Пицца детская пепперони': {'Пепперони': 1, 'Моцарелла': 1, 'Томаты': 1},
+    'Пицца пепперони': {'Пепперони': 2, 'Моцарелла': 2, 'Томаты': 1},
+    'Пицца Сырная': {'Моцарелла': 3},
+    'Пицца Маргарита': {'Моцарелла': 2, 'Томаты': 2},
+    'Пицца Ветчина и грибы': {'Моцарелла': 1, 'Ветчина': 1, 'Грибы': 1},
+    'Пицца Мясная': {'Пепперони': 2, 'Моцарелла': 1, 'Ветчина': 1},
+    'Картофель фри': {'Картофель': 1},
+    'Молочный коктейль': {'Молоко': 1},
+    'Пицца Двойной цыпленок': {'Моцарелла': 2, 'Курица': 2},
+    'Наггетсы': {'Курица': 1}
+}
+
+menu = {
+    'детское меню': {
+        'Пицца детская пепперони': 400,
+        'Картофель фри': 150,
+        'Молочный коктейль': 200,
+        'Пицца Двойной цыпленок': 560,
+        'Наггетсы': 200
+    },
+    'взрослое меню': {
+        'Пицца пепперони': 500,
+        'Пицца Сырная': 700,
+        'Пицца Мясная': 350,
+        'Пицца Ветчина и грибы': 570,
+        'Пицца Маргарита': 450
+    },
+}
+
+
+def hash_password(password, salt=None):
+    if salt is None:
+        salt = os.urandom(16).hex()
+    pwd_hash = hashlib.pbkdf2_hmac(
+        'sha256',
+        password.encode('utf-8'),
+        bytes.fromhex(salt),
+        100000
+    ).hex()
+    return salt, pwd_hash
+
+
+def setup_or_load_auth(auth_file="admin_auth.json"):
+    if os.path.exists(auth_file):
+        try:
+            with open(auth_file, "r", encoding="utf-8") as file:
+                data = json.load(file)
+                if "salt" in data and "hash" in data:
+                    return data
+        except (json.JSONDecodeError, IOError):
+            pass
+    print('\n[Настройка безопасности] Файл паролей не найден или поврежден.')
+    while True:
+        new_pwd = input('Придумайте новый пароль администратора (минимум 4 символа): ').strip()
+        if len(new_pwd) >= 4:
+            salt, pwd_hash = hash_password(new_pwd)
+            auth_data = {"salt": salt, "hash": pwd_hash}
+            with open(auth_file, "w", encoding="utf-8") as file:
+                json.dump(auth_data, file, indent=4)
+            print(f'Пароль зашифрован и сохранен в файл {auth_file}.\n')
+            return auth_data
+        print('Пароль слишком короткий. Попробуйте снова.')
+
+
+def require_password(auth_file="admin_auth.json"):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            auth_data = setup_or_load_auth(auth_file)
+            entered_pwd = input('Введите пароль администратора: ').strip()
+            _, entered_hash = hash_password(entered_pwd, auth_data["salt"])
+            if hmac.compare_digest(entered_hash, auth_data["hash"]):
+                return func(*args, **kwargs)
+            else:
+                print('Ошибка доступа: Неверный пароль!')
+                return None
+        return wrapper
+    return decorator
+
+
+def validate_age(min_age=1, max_age=119):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(age, *args, **kwargs):
+            if not isinstance(age, int) or isinstance(age, bool) or not (min_age <= age <= max_age):
+                raise ValueError(f'Возраст должен быть от {min_age} до {max_age} лет.')
+            return func(age, *args, **kwargs)
+        return wrapper
+    return decorator
+
+
+def print_receipt(func):
+    @wraps(func)
+    def wrapper(order_list, total_price, stats, *args, **kwargs):
+        result = func(order_list, total_price, stats, *args, **kwargs)
+        order_id = len(stats["orders_history"])
+        current_time = datetime.now().strftime("%d.%m.%Y %H:%M")
+        print('\n' + '=' * 34)
+        print('          КАССОВЫЙ ЧЕК')
+        print(f'Заказ №{order_id} | {current_time}')
+        print('-' * 34)
+        for idx, item in enumerate(order_list, 1):
+            print(f'{idx}. {item}')
+        print('-' * 34)
+        print(f'ИТОГО К ОПЛАТЕ: {total_price} руб.')
+        print('=' * 34 + '\n')
+        return result
+    return wrapper
+@validate_age(min_age=1, max_age=119)
+def get_age_category(age):
+    return 'детское меню' if age < 12 else 'взрослое меню'
+
+
+def load_ingredients():
+    filename = "ingredients.json"
+    try:
+        with open(filename, "r", encoding="utf-8") as file:
+            return json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError, IOError):
+        pass
+    ingredients = {
+        'Пепперони': {"количество": 5, "category": "мясо"},
+        'Моцарелла': {"количество": 27, "category": "сыр"},
+        'Томаты': {"количество": 8, "category": "овощи"},
+        'Грибы': {"количество": 10, "category": "овощи"},
+        'Ветчина': {"количество": 10, "category": "мясо"},
+        'Картофель': {"количество": 15, "category": "овощи"},
+        'Молоко': {"количество": 12, "category": "напитки"},
+        'Курица': {"количество": 10, "category": "мясо"}
+    }
+    save_ingredients(ingredients)
+    return ingredients
+
+
+def save_ingredients(ingredients):
+    with open("ingredients.json", "w", encoding="utf-8") as file:
+        json.dump(ingredients, file, ensure_ascii=False, indent=4)
+
+
+def load_stats():
+    filename = "sales_stats.json"
+    try:
+        with open(filename, "r", encoding="utf-8") as file:
+            return json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError, IOError):
+        return {
+            "total_revenue": 0,
+            "sales_count": {},
+            "orders_history": []
+        }
+
+
+def save_stats(stats):
+    with open("sales_stats.json", "w", encoding="utf-8") as file:
+        json.dump(stats, file, ensure_ascii=False, indent=4)
+
+
+def reserve_ingredients(dish_name, ingredients):
+    if dish_name not in recipes:
+        print(f"Ошибка: Для блюда «{dish_name}» не найден рецепт.")
+        return False
+    recipe = recipes[dish_name]
+    for ing, req_qty in recipe.items():
+        if ing not in ingredients or ingredients[ing]['количество'] < req_qty:
+            print(f"Ошибка: Недостаточно ингредиента '{ing}' для приготовления.")
+            return False
+    for ing, req_qty in recipe.items():
+        ingredients[ing]['количество'] -= req_qty
+    return True
+
+
+@print_receipt
+def log_order(order_list, total_price, stats):
+    stats["total_revenue"] += total_price
+    for item in order_list:
+        stats["sales_count"][item] = stats["sales_count"].get(item, 0) + 1
+    order_id = len(stats["orders_history"]) + 1
+    stats["orders_history"].append({
+        "order_id": order_id,
+        "items": order_list,
+        "total_price": total_price
+    })
+    save_stats(stats)
+
+
+@require_password("admin_auth.json")
+def admin_panel():
+    while True:
+        stats = load_stats()
+        print('--- Панель администратора ---')
+        print('1. Посмотреть количество проданных блюд')
+        print('2. Посмотреть историю заказов и выручку')
+        print('3. Проверить остатки ингредиентов на складе')
+        print('4. Пополнить склад ингредиентов')
+        print('0. Выйти из панели администратора')
+        try:
+            choice = int(input('Выберите действие: '))
+            if choice == 0:
+                print('Выход из панели администратора...')
+                break
+            elif choice == 1:
+                print('Количество проданных блюд:')
+                if not stats["sales_count"]:
+                    print("Продаж пока не было.")
+                for item, count in stats["sales_count"].items():
+                    print(f"• {item}: {count} шт.")
+            elif choice == 2:
+                print('История заказов:')
+                print(f"Общая выручка: {stats['total_revenue']} руб.")
+                if not stats["orders_history"]:
+                    print("История заказов пуста.")
+                for order in stats["orders_history"]:
+                    print(f"Заказ №{order['order_id']}: {', '.join(order['items'])} — {order['total_price']} руб.")
+            elif choice == 3:
+                print('Остатки на складе:')
+                current_stock = load_ingredients()
+                for ing, info in current_stock.items():
+                    print(f"• {ing}: {info['количество']} шт. ({info['category']})")
+            elif choice == 4:
+                current_stock = load_ingredients()
+                ing_list = list(current_stock.keys())
+                print('Выберите ингредиент для пополнения:')
+                for idx, ing in enumerate(ing_list, 1):
+                    print(f"{idx}. {ing} (сейчас на складе: {current_stock[ing]['количество']} шт.)")
+                print("0. Отмена")
+
+                ing_choice = int(input('Номер ингредиента: '))
+                if ing_choice == 0:
+                    continue
+                if 1 <= ing_choice <= len(ing_list):
+                    selected_ing = ing_list[ing_choice - 1]
+                    add_qty = int(input(f'Сколько штук «{selected_ing}» добавить? '))
+                    if add_qty > 0:
+                        current_stock[selected_ing]['количество'] += add_qty
+                        save_ingredients(current_stock)
+                        print(
+                            f"Склад обновлен! Теперь «{selected_ing}»: {current_stock[selected_ing]['количество']} шт.")
+                    else:
+                        print('Количество должно быть больше нуля.')
+                else:
+                    print('Неверный номер ингредиента.')
+            else:
+                print('Неверный пункт меню.')
+        except ValueError:
+            print('Ошибка: введите корректное число.')
+
+
+def main():
+    print('Добро пожаловать в Пиццерию!')
+    while True:
+        ingredients_stock = load_ingredients()
+        stats = load_stats()
+        user_input = input('\nСколько вас человек? (exit — выход): ').strip()
+        if user_input.lower() == 'exit':
+            print('Работа программы завершена. До свидания!')
+            break
+        if user_input.lower() == 'admin':
+            admin_panel()
+            continue
+        try:
+            guests_count = int(user_input)
+            if guests_count <= 0:
+                print('Количество гостей должно быть больше 0.')
+                continue
+            elif guests_count > 100:
+                print('Мы не можем обсулиживать более 100 гостей')
+                continue
+        except ValueError:
+            print('Пожалуйста, введите число или команду exit.')
+            continue
+        order_list = []
+        total_price = 0
+        for i in range(1, guests_count + 1):
+            while True:
+                try:
+                    age = int(input(f'\nГость {i}. Сколько вам лет? '))
+                    category = get_age_category(age)
+                    break
+                except ValueError as e:
+                    print(f'Ошибка: {e} Попробуйте снова.')
+            print(f'Отлично! Для вас доступно {category}:')
+            current_menu = menu[category]
+            menu_items = list(current_menu.keys())
+            for idx, (item, price) in enumerate(current_menu.items(), 1):
+                print(f'{idx}. {item} — {price} руб.')
+            while True:
+                try:
+                    choice = int(input('Выберите номер блюда для Гостя (0 — пропустить): '))
+                    if choice == 0:
+                        print('Гость решил ничего не заказывать.')
+                        break
+                    elif 1 <= choice <= len(menu_items):
+                        selected_dish = menu_items[choice - 1]
+                        if reserve_ingredients(selected_dish, ingredients_stock):
+                            dish_price = current_menu[selected_dish]
+                            order_list.append(selected_dish)
+                            total_price += dish_price
+                            print(f'Блюдо «{selected_dish}» ({dish_price} руб.) добавлено в заказ!')
+                            break
+                        else:
+                            print('Пожалуйста, выберите другое блюдо.')
+                    else:
+                        print('Неверный номер блюда. Попробуйте снова.')
+                except ValueError:
+                    print('Ошибка: введите число.')
+        if order_list:
+            save_ingredients(ingredients_stock)
+            log_order(order_list, total_price, stats)
+            print('Спасибо за заказ! Приятного аппетита!')
+        else:
+            print('Заказ пуст. Ждем вас снова!')
+
+
+main()
